@@ -1,0 +1,336 @@
+#include <iostream>
+#include <string>
+#include <cstdlib>  
+#include <ctime>    
+#include <thread>   
+#include <chrono>   
+
+using namespace std;
+
+int playerHp = 150, rawHp = 150;
+int playerStr = 50, rawStr = 50;
+int weaponBonus = 0;  // bonus da espada
+int dmg;  // cálculo do dano que sera feito durante o combate
+
+bool inicio = false, batalha = false;
+
+string player;
+
+char escolha;
+int inimigos = 0; 
+const int encontrarCastelo = 4;  // mostra o número de inimigos necessários para encontrar o castelo
+
+// status dos inimigos
+int hp, str, level;
+string type;
+string types[] = { "Zumbi", "Humano", "Esqueleto" };
+
+// historia com interacao (todas sao diferentes)
+void casteloLiberado();
+void sabioLiberado();
+void familiaPrincesa();
+
+// função para gerar um cenário aleatório
+void gerarCenario() {
+    string cenario[] = {
+        "Em uma floresta muito seca, você pisa em um galho seco, que faz barulho e atrai um inimigo.",
+        "Dentro de uma caverna escura, ao acender uma tocha, você dá de cara com um inimigo.",
+        "Caminhando pelo deserto, um vento forte levanta poeira e revela um inimigo que estava se escondendo.",
+        "Ao cruzar uma ponte velha, você percebe que um inimigo está te esperando do outro lado.",
+        "Em uma casa abandonada, ao abrir a porta, um inimigo surge das sombras.",
+        "Dentro de um templo antigo, cheio de riquezas, um inimigo te ataca com medo de você roubar o tesouro.",
+        "Andando por um pântano cheio de jacarés, um inimigo surge da lama te atacando imediatamente.",
+        "Dentro de uma igreja abandonada, você percebe sons estranhos vindo do banheiro e dá de cara com um inimigo."
+    };
+    int aleatorio = rand() % 8;  // seleciona um cenário aleatório
+    cout << "\n" << cenario[aleatorio] << "\n";
+}
+
+// função para gerar os inimigos
+void gerarInimigo() {
+    type = types[rand() % 3];
+    gerarCenario();  // gerar um cenario antes de qualquer combate
+    cout << "Você encontra um " << type << endl;
+    level = (rand() % 10) + 1;
+    hp = (rand() % 100) + 70;
+    str = (rand() % (level * hp / 10)) + 1;
+    cout << "\nStatus do inimigo -\n";
+    cout << "Hp = " << hp << endl;
+    cout << "Level = " << level << endl;
+    cout << "Força = " << str << endl;
+}
+
+// Função para simular atraso
+void delay(int milliseconds) {
+    this_thread::sleep_for(chrono::milliseconds(milliseconds));
+}
+
+// Função para limpar o console
+void clearConsole() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+// status do jogador
+void playerStatus() {
+    cout << "\n---------------------------------------\n";
+    cout << "Status do Jogador: \n";
+    cout << "Hp = " << playerHp << endl;
+    cout << "Força = " << playerStr + weaponBonus << endl;  // mostra a força + o bonus da espada
+    cout << "---------------------------------------\n";
+}
+
+// mensagem no inicio do jogo
+void mensagemInicio() {
+    cout << "Olá jogador!\n";
+    delay(750);
+    cout << "Hoje vamos participar de um RPG!\n";
+    inicio = true;
+}
+
+// função de combate
+void fight() {
+    playerStatus();  // status do jogador antes da luta
+
+    if (!batalha) {
+        cout << "Você enfrenta um inimigo\n";
+        delay(750);
+        gerarInimigo();
+    } else {
+        delay(750);
+        cout << "O inimigo continua a atacar\n";
+        delay(750);
+    }
+
+    cout << "---------------------------------------\n";
+    cout << "O que fazer? \n";
+    delay(750);
+    cout << "---------------------------------------\n";
+    cout << "Ataque básico (1)\nFugir (2)\n";
+    cout << "---------------------------------------\n";
+    delay(750);
+    cout << "Escolha: ";
+    cin >> escolha;
+
+    switch (escolha) {
+        case '1':
+            dmg = rand() % 20 + playerStr + weaponBonus;  // Calcula o dano + bônus da espada (caso tenha a sorte de pegar)
+            cout << "Você ataca e causa " << dmg << " de dano\n";
+            delay(200);
+            hp -= dmg;
+            if (hp > 0) {
+                cout << "O inimigo está com " << hp << " de vida\n";
+                delay(750);
+                int dmgToken = rand() % str;  // Dano do inimigo
+                cout << "O inimigo ataca e causa " << dmgToken << " de dano\n";
+                playerHp -= dmgToken;
+                delay(200);
+                cout << "Você está com " << playerHp << " de vida\n";
+                delay(1000);
+                batalha = true;
+                fight();
+            } else {
+                cout << "O inimigo foi derrotado!\n";
+                cout << "Você subiu de nível!!!\n";
+                playerHp = rawHp += 20;
+                playerStr = rawStr += 5;
+                cout << "Hp = " << playerHp << endl;
+                cout << "Força = " << playerStr + weaponBonus << endl;
+                batalha = false;
+                inimigos++;
+
+                // chance de ativar evento do sábio
+                if (rand() % 4 == 0) sabioLiberado();
+
+                // checa se já derrotou inimigos suficientes para encontrar o castelo
+                if (inimigos >= encontrarCastelo) {
+                    casteloLiberado();
+                } else {
+                    fight();
+                }
+            }
+            break;
+        case '2':
+            cout << "Você tenta fugir...\n";
+            delay(1000);
+            if (rand() % 2 == 0) {
+                int healing = rand() % 30 + 20;
+                playerHp += healing;
+                if (playerHp > rawHp) playerHp = rawHp;
+                cout << "Você conseguiu fugir e recuperou " << healing << " de vida!\n";
+            } else {
+                int swordBonus = rand() % 5 + 1;
+                weaponBonus += swordBonus;
+                cout << "Você encontrou uma espada que aumenta sua força em +" << swordBonus << "!\n";
+            }
+            delay(1000);
+            batalha = false;
+
+            if (inimigos >= encontrarCastelo) {
+                casteloLiberado();
+            } else {
+                fight();
+            }
+            break;
+        default:
+            cout << "Escolha inválida!\n";
+            fight();
+    }
+}
+
+// função para o evento do castelo
+void casteloLiberado() {
+    cout << "\nNo seu caminho, você encontra um grande castelo misterioso, suas torres altas quase tocando as nuvens, com muros de pedras cobertos por musgos verdes. Atrás do castelo, entre árvores retorcidas e arbustos floridos, espalham-se cogumelos mágicos de todos os tamanhos e cores. Alguns brilham em tons de azul e roxo, como se guardassem uma força divina em seu interior, outros, em vermelho e dourado, parecem pulsar levemente, como corações vivos.\n";
+    delay(1000);
+    cout << "Você deseja entrar no castelo ou seguir em frente?\n";
+    delay(750);
+    cout << "Entrar no castelo (1)\nSeguir em frente (2)\n";
+    cout << "Escolha: ";
+    cin >> escolha;
+
+    if (escolha == '1') {
+        cout << "Você decide entrar no castelo...\n";
+        delay(1000);
+        cout << "Lá dentro, você encontra uma linda princesa.\n";
+        delay(1000);
+        cout << "Vocêss se apaixonam a primeira vista, e se casam após alguns meses, com uma festa de casamento imensa e muito feliz!.\n";
+        familiaPrincesa();  // player interage com a família da princesa
+    } else if (escolha == '2') {
+        cout << "Você decide seguir em frente...\n";
+        delay(1000);
+        cout << "Infelizmente, você encontra um monstro muito mais forte do que você.\n";
+        delay(1000);
+        cout << "O monstro ataca e te derrota instantaneamente. Não havia como vencer.\n";
+        delay(2000);
+        cout << "Você morreu. Fim de jogo.\n";
+        exit(0);
+    } else {
+        cout << "Escolha inválida!\n";
+        casteloLiberado();
+    }
+}
+
+// Função para o encontro com o sábio
+void sabioLiberado() {
+    cout << "\nNo caminho, você encontra um sábio misterioso.\n";
+    delay(1000);
+    cout << "Ele te convida para procurar cogumelos mágicos atrás de um grande castelo, esses cogumelos podem aumentar sua força ou curar sua vida imediatamente.\n";
+    cout << "Aceitar (1)\nRecusar (2)\n";
+    cout << "Escolha: ";
+    cin >> escolha;
+
+    if (escolha == '1') {
+        cout << "Você acha os cogumelos e come alguns\n";
+        int reward = rand() % 2;  // bônus de força ou vida (aleatorio)
+        if (reward == 0) {
+            playerStr += 10;
+            cout << "Você comeu os cogumelos mágicos brilhantes em tons de azul e roxo que aumentaram sua força em +10!\n";
+        } else {
+            playerHp = rawHp;
+            cout << "Voce comeu os cogumelos mágicos vermelho e dourado que pareciam pulsar como um coração, eles curaram completamente seus ferimentos!\n";
+        }
+    } else if (escolha == '2') {
+        cout << "Você ignora o sábio. Ele lança uma maldição sobre você!\n";
+        playerHp /= 2;
+        cout << "Seu HP foi reduzido pela metade!\n";
+    } else {
+        cout << "Escolha inválida!\n";
+        sabioLiberado();
+    }
+}
+
+// função para interação com a família da princesa
+void familiaPrincesa() {
+    cout << "\nApós se casar com a princesa, você é convidado a conhecer a família real.\n";
+    delay(1000);
+    cout << "O rei oferece um desafio: derrotar um monstro poderoso para provar seu valor.\n";
+    cout << "Aceitar (1)\nRecusar (2)\n";
+    cout << "Escolha: ";
+    cin >> escolha;
+
+    if (escolha == '1') {
+        cout << "Você aceita o desafio e enfrenta um monstro poderoso!\n";
+        int monsterHp = 200;
+        int monsterStr = 80;
+        cout << "Status do monstro:\nHP = " << monsterHp << "\nForça = " << monsterStr << endl;
+        while (monsterHp > 0 && playerHp > 0) {
+            int playerDmg = rand() % 30 + playerStr;
+            int monsterDmg = rand() % 20 + monsterStr;
+
+            cout << "Você ataca e causa " << playerDmg << " de dano!\n";
+            monsterHp -= playerDmg;
+
+            if (monsterHp > 0) {
+                cout << "O monstro ataca e causa " << monsterDmg << " de dano!\n";
+                playerHp -= monsterDmg;
+            }
+        }
+
+        if (playerHp > 0) {
+            cout << "Você derrota o monstro e o rei te da uma armadura lendária!\n";
+            weaponBonus += 20;
+            cout << "Sua força aumentou em +50!\n";
+        } else {
+            cout << "Você foi derrotado pelo monstro...\n";
+            cout << "Fim de jogo.\n";
+            exit(0);
+        }
+    } else if (escolha == '2') {
+        cout << "Você recusa o desafio. E o rei não te acha digno para ficar com sua filha, te expulsando do castelo pra sempre!.\n";
+        cout << "Fim de jogo.\n";
+        exit(0);
+    } else {
+        cout << "Escolha inválida!\n";
+        familiaPrincesa();
+    }
+}
+
+int main() {
+    srand(time(NULL));
+    clearConsole();
+
+    if (!inicio) {
+        mensagemInicio();
+    }
+
+    cout << "Escolha uma classe para começar:\n";
+    cout << "1 - Guerreiro (Força Alta, Vida Média)\n";
+    cout << "2 - Mago (Força Média, Vida Alta)\n";
+    cout << "3 - Arqueiro (Força Alta, Vida Baixa)\n";
+    cout << "Escolha: ";
+    cin >> escolha;
+
+    switch (escolha) {
+        case '1':
+            playerHp = 100;
+            playerStr = 70;
+            player = "Guerreiro";
+            break;
+        case '2':
+            playerHp = 150;
+            playerStr = 50;
+            player = "Mago";
+            break;
+        case '3':
+            playerHp = 70;
+            playerStr = 100;
+            player = "Arqueiro";
+            break;
+        default:
+            cout << "Escolha inválida!\n";
+            return 0;
+    }
+
+    rawHp = playerHp;
+    rawStr = playerStr;
+
+    cout << "Você escolheu a classe " << player << ". Boa sorte!\n";
+    delay(1000);
+
+    fight();
+
+    return 0;
+}
